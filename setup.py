@@ -26,7 +26,7 @@ setup(
     name='django-ohio-voter-file',
     version=VERSION,
     description='The Ohio Voter File behind the Django ORM',
-    url='', # TODO
+    url='https://github.com/hodgesmr/django-ohio-voter-file',
     long_description=get_readme(),
     author='Matt Hodges',
     packages=['ohiovoter'],

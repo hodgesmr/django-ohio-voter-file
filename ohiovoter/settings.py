@@ -18,3 +18,5 @@ DATABASES = {
     },
 
 }
+
+INSTALLED_APPS = ("ohiovoter",)

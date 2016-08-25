@@ -28,7 +28,7 @@ setup(
     url='', # TODO
     long_description=get_readme(),
     author='Matt Hodges',
-    packages=['ohiovoter', 'utils'],
+    packages=['ohiovoter'],
     zip_safe=False,
     install_requires=REQUIREMENTS,
     include_package_data=True,

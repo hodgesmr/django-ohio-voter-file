@@ -1,11 +1,10 @@
 import os
 
-########## DATABASE CONFIGURATION
 DB_NAME = os.getenv('DB_NAME')
-HOST = os.getenv('DB_HOST')
-USER = os.getenv('DB_USER')
-PASS = os.getenv('DB_PASS')
-PORT = os.getenv('DB_PORT', 5432)
+DB_HOST = os.getenv('DB_HOST')
+DB_USER = os.getenv('DB_USER')
+DB_PASS = os.getenv('DB_PASS')
+DB_PORT = os.getenv('DB_PORT', 5432)
 
 DATABASES = {
     'default': {
@@ -20,3 +19,7 @@ DATABASES = {
 }
 
 INSTALLED_APPS = ("ohiovoter",)
+
+# Populate this setting in a secure way if you deploy beyond local
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
+SECRET_KEY = 'secret'

@@ -1,4 +1,4 @@
-FROM python:2.7
+FROM python:3.5
 ENV APP_DIR=/opt/ohiovoter \
     PYTHONUNBUFFERED=1
 RUN pip install -U pip ipython

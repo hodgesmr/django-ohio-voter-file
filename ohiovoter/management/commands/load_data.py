@@ -2,7 +2,7 @@ import csv
 from datetime import datetime
 import os
 import shutil
-import urllib
+import urllib.request
 import zipfile
 
 from django.core import management
@@ -113,13 +113,13 @@ class Command(BaseCommand):
         message = ('\nThis command will completely wipe your database and download & parse the latest Ohio Voter File data.'
                    '\nThe process is very slow and can take minutes or hours depending on your network and machine. Continue? (y/n): ')
 
-        answer = raw_input(message)
+        answer = input(message)
 
         if answer == 'y':
             management.call_command('flush', interactive=False)
 
             for county in COUNTIES:
-                print '\nDownloading {} County data...'.format(county.title())
+                print('\nDownloading {} County data...'.format(county.title()))
 
                 url = 'ftp://sosftp.sos.state.oh.us/free/Voter/{}.zip'.format(county)
 
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                     os.makedirs(WORKING_DIR)
 
                 downloaded_file = '{}{}.zip'.format(WORKING_DIR, county)
-                urllib.urlretrieve(url, downloaded_file)
+                urllib.request.urlretrieve(url, downloaded_file)
                 with zipfile.ZipFile(downloaded_file, 'r') as z:
                     z.extractall(WORKING_DIR)
                 os.remove(downloaded_file)
@@ -136,9 +136,9 @@ class Command(BaseCommand):
                 county_filename = '{}{}_COUNTY.csv'.format(WORKING_DIR, county)
                 os.rename(old_filename, county_filename)
 
-                print 'Parsing and loading {} County data...'.format(county.title())
+                print('Parsing and loading {} County data...'.format(county.title()))
 
-                with open(county_filename, 'rb') as input_file:
+                with open(county_filename, encoding='utf-8') as input_file:
                     reader = csv.reader(input_file)
 
                     header = next(reader)
@@ -178,6 +178,6 @@ class Command(BaseCommand):
                         voter.elections.add(*elections)
                         voter.save()
 
-            print '\nCleaning up...'
+            print('\nCleaning up...')
             shutil.rmtree(TMP_DIR)
-            print '\nDone!'
+            print('\nDone!')

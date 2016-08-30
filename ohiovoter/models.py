@@ -12,6 +12,8 @@ class Election(models.Model):
         (CATEGORY_SPECIAL, 'SPECIAL'),
     )
 
+    CATEGORY_CHOICES_REVERSE_MAP = {_[1]:_[0] for _ in CATEGORY_CHOICES}
+
     PARTY_CONSTITUTION = 'C'
     PARTY_DEMOCRAT = 'D'
     PARTY_REFORM = 'E'
@@ -34,6 +36,8 @@ class Election(models.Model):
         (PARTY_NONE, 'N/A'),
     )
 
+    PARTY_CHOICES_SET = set([_[0] for _ in PARTY_CHOICES])
+
     category = models.IntegerField(db_index=True, null=False, blank=False, choices=CATEGORY_CHOICES)
     date = models.DateField(db_index=True, null=False, blank=False)
     party = models.CharField(max_length=512, db_index=True, null=False, blank=False, choices=PARTY_CHOICES)
@@ -41,9 +45,14 @@ class Election(models.Model):
     def __str__(self):
         if self.party != self.PARTY_NONE:
             output = '{} {} {}'.format(self.date.strftime('%Y-%m-%d'),
-                                       self.party.get_display(),
-                                       self.category.get_display(),
+                                       self.get_party_display(),
+                                       self.get_category_display(),
                                        )
+        else:
+            output = '{} {}'.format(self.date.strftime('%Y-%m-%d'),
+                                       self.get_category_display(),
+                                       )
+        return output
 
     class Meta:
         unique_together = ('category', 'date', 'party')

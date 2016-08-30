@@ -106,3 +106,6 @@ class Voter(models.Model):
                                       self.middle_name,
                                       self.last_name,
                                       )
+
+    class Meta:
+        ordering('last_name', 'first_name', 'middle_name')

@@ -118,6 +118,7 @@ class Command(BaseCommand):
             import time
             start = time.time()
 
+            # caching the elections across files to decrease DB I/O
             cached_elections = {}
 
             for county in COUNTIES:
@@ -143,20 +144,25 @@ class Command(BaseCommand):
 
                         header = next(reader)
 
+                        # all of the Voter objects built from this csv
                         voters = []
-                        participations_list = []
+
+                        # a list of lists, each item being a list of elections index-coresponding to voters
+                        election_lists = []
 
                         for row in reader:
-                            elections = []
+                            this_voters_elections = []
                             voter_kwargs = {'county': county}
                             election_kwargs = {}
 
                             for index, column_value in enumerate(row):
                                 field_name = header[index]
                                 lower_field_name = field_name.lower()
-                                if hasattr(Voter, lower_field_name):
+
+                                if hasattr(Voter, lower_field_name):  # parse Voter data
                                     voter_kwargs[lower_field_name] = column_value
-                                else:
+
+                                else:  # parse Election data
                                     if column_value:
                                         category_display, date_string = field_name.split('-')
 
@@ -167,6 +173,7 @@ class Command(BaseCommand):
                                         election_kwargs['party'] = election_party
                                         election_kwargs['date'] = datetime.strptime(date_string, '%m/%d/%Y')
 
+                                        # Get the cached election, or create a cache if we've never seen it before
                                         hashable_election_kwargs = frozenset(election_kwargs.items())
                                         election = cached_elections.get(hashable_election_kwargs, None)
                                         if not election:
@@ -174,21 +181,22 @@ class Command(BaseCommand):
                                             election.save()
                                             cached_elections[hashable_election_kwargs] = election
 
-                                        elections.append(election)
+                                        this_voters_elections.append(election)
 
-                            participations_list.append(elections)
+                            election_lists.append(this_voters_elections)
 
                             voter = Voter(**voter_kwargs)
                             voters.append(voter)
 
                         Voter.objects.bulk_create(voters)
 
+                        # Build out our middle Participation table
                         participations = []
-                        for index, participation in enumerate(participations_list):
+                        for index, election_list in enumerate(election_lists):
                             voter = voters[index]
-                            for election in participation:
-                                p_object = Participation(voter=voter, election=election)
-                                participations.append(p_object)
+                            for election in election_list:
+                                participation = Participation(voter=voter, election=election)
+                                participations.append(participation)
                         Participation.objects.bulk_create(participations)
 
             print('\nDone!')

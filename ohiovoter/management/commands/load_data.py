@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 import os
 import shutil
+import tempfile
 import urllib.request
 import zipfile
 
@@ -102,10 +103,6 @@ COUNTIES = [
     'WYANDOT',
 ]
 
-MY_DIR = os.path.dirname(os.path.realpath(__file__))
-DATETIME_STRING = datetime.utcnow().strftime("%Y_%m_%dT%H_%M_%SZ")
-TMP_DIR = '{}/tmp/'.format(MY_DIR, DATETIME_STRING)
-WORKING_DIR = '{}{}/'.format(TMP_DIR, DATETIME_STRING)
 
 class Command(BaseCommand):
     def handle(self, **kwargs):
@@ -126,70 +123,66 @@ class Command(BaseCommand):
 
                 url = 'ftp://sosftp.sos.state.oh.us/free/Voter/{}.zip'.format(county)
 
-                if not os.path.exists(WORKING_DIR):
-                    os.makedirs(WORKING_DIR)
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    downloaded_file = '{}/{}.zip'.format(tmpdirname, county)
+                    urllib.request.urlretrieve(url, downloaded_file)
+                    with zipfile.ZipFile(downloaded_file, 'r') as z:
+                        z.extractall(tmpdirname)
+                    os.remove(downloaded_file)
 
-                downloaded_file = '{}{}.zip'.format(WORKING_DIR, county)
-                urllib.request.urlretrieve(url, downloaded_file)
-                with zipfile.ZipFile(downloaded_file, 'r') as z:
-                    z.extractall(WORKING_DIR)
-                os.remove(downloaded_file)
+                    old_filename = '{}/{}.TXT'.format(tmpdirname, county)
+                    county_filename = '{}/{}_COUNTY.csv'.format(tmpdirname, county)
+                    os.rename(old_filename, county_filename)
 
-                old_filename = '{}{}.TXT'.format(WORKING_DIR, county)
-                county_filename = '{}{}_COUNTY.csv'.format(WORKING_DIR, county)
-                os.rename(old_filename, county_filename)
+                    print('Parsing and loading {} County data...'.format(county.title()))
 
-                print('Parsing and loading {} County data...'.format(county.title()))
+                    with open(county_filename, encoding='utf-8') as input_file:
+                        reader = csv.reader(input_file)
 
-                with open(county_filename, encoding='utf-8') as input_file:
-                    reader = csv.reader(input_file)
+                        header = next(reader)
 
-                    header = next(reader)
+                        voters = []
+                        participations_list = []
 
-                    voters = []
-                    participations_list = []
+                        for row in reader:
+                            elections = []
+                            voter_kwargs = {'county': county}
+                            election_kwargs = {}
 
-                    for row in reader:
-                        elections = []
-                        voter_kwargs = {'county': county}
-                        election_kwargs = {}
+                            for index, column_value in enumerate(row):
+                                field_name = header[index]
+                                lower_field_name = field_name.lower()
+                                if hasattr(Voter, lower_field_name):
+                                    voter_kwargs[lower_field_name] = column_value
+                                else:
+                                    if column_value:
+                                        category_display, date_string = field_name.split('-')
 
-                        for index, column_value in enumerate(row):
-                            field_name = header[index]
-                            lower_field_name = field_name.lower()
-                            if hasattr(Voter, lower_field_name):
-                                voter_kwargs[lower_field_name] = column_value
-                            else:
-                                if column_value:
-                                    category_display, date_string = field_name.split('-')
+                                        election_category = Election.CATEGORY_CHOICES_REVERSE_MAP[category_display]
+                                        election_party = column_value
 
-                                    election_category = Election.CATEGORY_CHOICES_REVERSE_MAP[category_display]
-                                    election_party = column_value
+                                        election_kwargs['category'] = election_category
+                                        election_kwargs['party'] = election_party
+                                        election_kwargs['date'] = datetime.strptime(date_string, '%m/%d/%Y')
 
-                                    election_kwargs['category'] = election_category
-                                    election_kwargs['party'] = election_party
-                                    election_kwargs['date'] = datetime.strptime(date_string, '%m/%d/%Y')
+                                        election = Election.objects.get_or_create(**election_kwargs)
+                                        elections.append(election[0])
 
-                                    election = Election.objects.get_or_create(**election_kwargs)
-                                    elections.append(election[0])
+                            participations_list.append(elections)
 
-                        participations_list.append(elections)
+                            voter = Voter(**voter_kwargs)
+                            voters.append(voter)
 
-                        voter = Voter(**voter_kwargs)
-                        voters.append(voter)
+                        Voter.objects.bulk_create(voters)
 
-                    Voter.objects.bulk_create(voters)
+                        participations = []
+                        for index, participation in enumerate(participations_list):
+                            voter = voters[index]
+                            for election in participation:
+                                p_object = Participation(voter=voter, election=election)
+                                participations.append(p_object)
+                        Participation.objects.bulk_create(participations)
 
-                    participations = []
-                    for index, participation in enumerate(participations_list):
-                        voter = voters[index]
-                        for p in participation:
-                            p_object = Participation(voter=voter, election=p)
-                            participations.append(p_object)
-                    Participation.objects.bulk_create(participations)
-
-            print('\nCleaning up...')
-            shutil.rmtree(TMP_DIR)
             print('\nDone!')
 
             end = time.time()

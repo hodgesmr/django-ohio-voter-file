@@ -1,5 +1,8 @@
+from contextlib import closing
 import csv
+from django.db import connection
 from datetime import datetime
+from io import StringIO
 import os
 import shutil
 import tempfile
@@ -126,6 +129,9 @@ class Command(BaseCommand):
 
                 url = 'ftp://sosftp.sos.state.oh.us/free/Voter/{}.zip'.format(county)
 
+                voter_columns = []
+                participation_columns = ['voter_id', 'election_id']  # I know these ahead of time because I made them.
+
                 with tempfile.TemporaryDirectory() as tmpdirname:
                     downloaded_file = '{}/{}.zip'.format(tmpdirname, county)
                     urllib.request.urlretrieve(url, downloaded_file)
@@ -144,15 +150,17 @@ class Command(BaseCommand):
 
                         header = next(reader)
 
-                        # all of the Voter objects built from this csv
-                        voters = []
+                        voter_stream = StringIO()
+                        voter_writer = csv.writer(voter_stream, delimiter='\t')
 
-                        # a list of lists, each item being a list of elections index-coresponding to voters
-                        election_lists = []
+                        participation_stream = StringIO()
+                        participation_writer = csv.writer(participation_stream, delimiter='\t')
 
                         c_start = time.time()
                         print('Starting to parse CSV')
                         for row in reader:
+                            this_voters_data = []
+
                             this_voters_elections = []
                             voter_kwargs = {'county': county}
                             election_kwargs = {}
@@ -162,8 +170,8 @@ class Command(BaseCommand):
                                 lower_field_name = field_name.lower()
 
                                 if hasattr(Voter, lower_field_name):  # parse Voter data
-                                    voter_kwargs[lower_field_name] = column_value
-
+                                    voter_columns.append(lower_field_name)
+                                    this_voters_data.append(column_value)
                                 else:  # parse Election data
                                     if column_value:
                                         category_display, date_string = field_name.split('-')
@@ -183,12 +191,8 @@ class Command(BaseCommand):
                                             election.save()
                                             cached_elections[hashable_election_kwargs] = election
 
-                                        this_voters_elections.append(election)
-
-                            election_lists.append(this_voters_elections)
-
-                            voter = Voter(**voter_kwargs)
-                            voters.append(voter)
+                                        participation_writer.writerow([this_voters_data[0], election.id])
+                            voter_writer.writerow(this_voters_data)
 
                         c_end = time.time()
                         print('Done parsing CSV')
@@ -196,27 +200,32 @@ class Command(BaseCommand):
 
                         v_start = time.time()
                         print('Starting to insert Voters')
-                        Voter.objects.bulk_create(voters)
+                        voter_stream.seek(0)
+                        seen = set()
+                        seen_add = seen.add
+                        voter_columns_unique = [x for x in voter_columns if not (x in seen or seen_add(x))]
+                        with closing(connection.cursor()) as cursor:
+                            cursor.copy_from(
+                                file=voter_stream,
+                                table='ohiovoter_voter',
+                                sep='\t',
+                                columns=voter_columns_unique,
+                            )
+
                         v_end = time.time()
                         print('Done inserting Voters')
                         print('Writing voters took: {}'.format(v_end-v_start))
 
-                        # Build out our middle Participation table
-                        b_start = time.time()
-                        print('Building participations')
-                        participations = []
-                        for index, election_list in enumerate(election_lists):
-                            voter = voters[index]
-                            for election in election_list:
-                                participation = Participation(voter=voter, election=election)
-                                participations.append(participation)
-                        b_end = time.time()
-                        print('Done building participations')
-                        print('Building participations took: {}'.format(b_end-b_start))
-
                         p_start = time.time()
                         print('Starting to insert Participations')
-                        Participation.objects.bulk_create(participations)
+                        participation_stream.seek(0)
+                        with closing(connection.cursor()) as cursor:
+                            cursor.copy_from(
+                                file=participation_stream,
+                                table='ohiovoter_participation',
+                                sep='\t',
+                                columns=participation_columns,
+                            )
                         p_end = time.time()
                         print('Done inserting Participations')
                         print('Writing participations took: {}'.format(p_end-p_start))

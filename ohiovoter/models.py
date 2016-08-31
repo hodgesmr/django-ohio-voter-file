@@ -42,6 +42,10 @@ class Election(models.Model):
     date = models.DateField(db_index=True, null=False, blank=False)
     party = models.CharField(max_length=512, db_index=True, null=False, blank=False, choices=PARTY_CHOICES)
 
+    @property
+    def voters(self):
+        return [obj.voter for obj in v.participations.all()]
+
     def __str__(self):
         if self.party != self.PARTY_NONE:
             output = '{} {} {}'.format(self.date.strftime('%Y-%m-%d'),
@@ -107,7 +111,10 @@ class Voter(models.Model):
     village = models.CharField(max_length=512, null=True)
     ward = models.CharField(max_length=512, null=True)
     county = models.CharField(max_length=512, null=True)
-    elections = models.ManyToManyField(Election)
+
+    @property
+    def elections(self):
+        return [obj.election for obj in v.participations.all()]
 
     def __str__(self):
         return '{} - {} {} {}'.format(self.sos_voterid,
@@ -118,3 +125,11 @@ class Voter(models.Model):
 
     class Meta:
         ordering = ('last_name', 'first_name', 'middle_name')
+
+
+class Participation(models.Model):
+    election = models.ForeignKey(Election, related_name='participations', on_delete=models.CASCADE)
+    voter = models.ForeignKey(Voter, related_name='participations', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('election', 'voter')

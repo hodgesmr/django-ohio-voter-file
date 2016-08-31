@@ -8,7 +8,7 @@ import zipfile
 from django.core import management
 from django.core.management.base import BaseCommand
 
-from ohiovoter.models import Election, Voter
+from ohiovoter.models import Election, Voter, Participation
 
 
 COUNTIES = [
@@ -118,6 +118,9 @@ class Command(BaseCommand):
         if answer == 'y':
             management.call_command('flush', interactive=False)
 
+            import time
+            start = time.time()
+
             for county in COUNTIES:
                 print('\nDownloading {} County data...'.format(county.title()))
 
@@ -143,6 +146,9 @@ class Command(BaseCommand):
 
                     header = next(reader)
 
+                    voters = []
+                    participations_list = []
+
                     for row in reader:
                         elections = []
                         voter_kwargs = {'county': county}
@@ -164,20 +170,27 @@ class Command(BaseCommand):
                                     election_kwargs['party'] = election_party
                                     election_kwargs['date'] = datetime.strptime(date_string, '%m/%d/%Y')
 
-                                    try:
-                                        election = Election.objects.get(**election_kwargs)
-                                    except Election.DoesNotExist:
-                                        election = Election.objects.create(**election_kwargs)
-                                        election.save()
-                                        elections.append(election)
+                                    election = Election.objects.get_or_create(**election_kwargs)
+                                    elections.append(election[0])
 
-                        # I'd love to do a bulk_create here, but the Django docs say it won't work
-                        # https://docs.djangoproject.com/en/1.10/ref/models/querysets/#bulk-create
-                        # Because of the ManyToManyField
-                        voter = Voter.objects.create(**voter_kwargs)
-                        voter.elections.add(*elections)
-                        voter.save()
+                        participations_list.append(elections)
+
+                        voter = Voter(**voter_kwargs)
+                        voters.append(voter)
+
+                    Voter.objects.bulk_create(voters)
+
+                    participations = []
+                    for index, participation in enumerate(participations_list):
+                        voter = voters[index]
+                        for p in participation:
+                            p_object = Participation(voter=voter, election=p)
+                            participations.append(p_object)
+                    Participation.objects.bulk_create(participations)
 
             print('\nCleaning up...')
             shutil.rmtree(TMP_DIR)
             print('\nDone!')
+
+            end = time.time()
+            print(end - start)

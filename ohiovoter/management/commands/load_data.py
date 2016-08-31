@@ -118,6 +118,8 @@ class Command(BaseCommand):
             import time
             start = time.time()
 
+            cached_elections = {}
+
             for county in COUNTIES:
                 print('\nDownloading {} County data...'.format(county.title()))
 
@@ -165,8 +167,14 @@ class Command(BaseCommand):
                                         election_kwargs['party'] = election_party
                                         election_kwargs['date'] = datetime.strptime(date_string, '%m/%d/%Y')
 
-                                        election = Election.objects.get_or_create(**election_kwargs)
-                                        elections.append(election[0])
+                                        hashable_election_kwargs = frozenset(election_kwargs.items())
+                                        election = cached_elections.get(hashable_election_kwargs, None)
+                                        if not election:
+                                            election = Election.objects.create(**election_kwargs)
+                                            election.save()
+                                            cached_elections[hashable_election_kwargs] = election
+
+                                        elections.append(election)
 
                             participations_list.append(elections)
 

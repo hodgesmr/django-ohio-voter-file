@@ -150,6 +150,8 @@ class Command(BaseCommand):
                         # a list of lists, each item being a list of elections index-coresponding to voters
                         election_lists = []
 
+                        c_start = time.time()
+                        print('Starting to parse CSV')
                         for row in reader:
                             this_voters_elections = []
                             voter_kwargs = {'county': county}
@@ -188,16 +190,36 @@ class Command(BaseCommand):
                             voter = Voter(**voter_kwargs)
                             voters.append(voter)
 
+                        c_end = time.time()
+                        print('Done parsing CSV')
+                        print('Parsing CSV took: {}'.format(c_end-c_start))
+
+                        v_start = time.time()
+                        print('Starting to insert Voters')
                         Voter.objects.bulk_create(voters)
+                        v_end = time.time()
+                        print('Done inserting Voters')
+                        print('Writing voters took: {}'.format(v_end-v_start))
 
                         # Build out our middle Participation table
+                        b_start = time.time()
+                        print('Building participations')
                         participations = []
                         for index, election_list in enumerate(election_lists):
                             voter = voters[index]
                             for election in election_list:
                                 participation = Participation(voter=voter, election=election)
                                 participations.append(participation)
+                        b_end = time.time()
+                        print('Done building participations')
+                        print('Building participations took: {}'.format(b_end-b_start))
+
+                        p_start = time.time()
+                        print('Starting to insert Participations')
                         Participation.objects.bulk_create(participations)
+                        p_end = time.time()
+                        print('Done inserting Participations')
+                        print('Writing participations took: {}'.format(p_end-p_start))
 
             print('\nDone!')
 

@@ -14,6 +14,7 @@ DATABASES = {
         'USER': DB_USER,
         'PASSWORD': DB_PASS,
         'PORT': DB_PORT,
+        'CONN_MAX_AGE': None,
     },
 
 }

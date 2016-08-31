@@ -44,7 +44,7 @@ class Election(models.Model):
 
     @property
     def voters(self):
-        return [obj.voter for obj in v.participations.all()]
+        return [obj.voter for obj in self.participations.all()]
 
     def __str__(self):
         if self.party != self.PARTY_NONE:
@@ -114,7 +114,7 @@ class Voter(models.Model):
 
     @property
     def elections(self):
-        return [obj.election for obj in v.participations.all()]
+        return [obj.election for obj in self.participations.all()]
 
     def __str__(self):
         return '{} - {} {} {}'.format(self.sos_voterid,

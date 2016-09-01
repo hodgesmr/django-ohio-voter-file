@@ -191,8 +191,6 @@ class Command(BaseCommand):
 
     @staticmethod
     def load_county_data_into_db(county, directory_name):
-        print('Parsing and imorting {} County data...'.format(county.title()))
-
         county_filename = '{}/{}.TXT'.format(directory_name, county)
 
         with open(county_filename, encoding='utf-8') as input_file:
@@ -269,6 +267,12 @@ class Command(BaseCommand):
                     columns=PARTICIPATION_COLUMNS,
                 )
 
+    @staticmethod
+    def download_and_parse(county, directory_name):
+        Command.download_county_data(county, directory_name)
+        Command.load_county_data_into_db(county, directory_name)
+        print('{} County...Finished!'.format(county.title()))
+
     def handle(self, **kwargs):
         message = ('\nThis command will completely wipe your database and '
                    'download & parse the latest Ohio Voter File data. The '
@@ -282,27 +286,18 @@ class Command(BaseCommand):
             management.call_command('flush', interactive=False)
             management.call_command('migrate', interactive=False)
 
+            print('\nDownloading and parsing county data. This will take a while...')
 
-
-            # download all the county data from the SoS website
-            print('\nDownloading County data...')
-
+            start = time.time()
             with tempfile.TemporaryDirectory() as tmpdirname:
 
                 args = [(county, tmpdirname) for county in COUNTIES]
 
-                pool = ThreadPool(2)
-                pool.starmap(self.download_county_data, args)
+                pool = ThreadPool(8)
+                pool.starmap(self.download_and_parse, args)
                 pool.close()
                 pool.join()
-
-                start = time.time()
-                pool = ThreadPool(2)
-                pool.starmap(self.load_county_data_into_db, args)
-                pool.close()
-                pool.join()
-
-                end = time.time()
-                print(end - start)
 
             print('\nDone!')
+            end = time.time()
+            print(end - start)

@@ -7,6 +7,7 @@ from io import StringIO
 from multiprocessing.dummy import Pool as ThreadPool
 import os
 import tempfile
+from threading import Lock
 import time
 import urllib.request
 import zipfile
@@ -177,6 +178,7 @@ PARTICIPATION_COLUMNS = [
 class Command(BaseCommand):
 
     processed_elections = set()
+    elections_lock = Lock()
 
     @staticmethod
     def download_county_data(county, destination_directory):
@@ -205,9 +207,6 @@ class Command(BaseCommand):
             voter_writer = csv.writer(voter_stream, delimiter=',', quoting=csv.QUOTE_ALL)
             voter_writer.writerow(VOTER_COLUMNS)  # start with the header
 
-            election_writer = csv.writer(election_stream, delimiter=',', quoting=csv.QUOTE_ALL)
-            election_writer.writerow(ELECTION_COLUMNS)  # start with the header
-
             # Since I'm not defining this table, not pulling it from the CSV,
             # I don't need to quote my values, and we'll add the header at write
             participation_writer = csv.writer(participation_stream, delimiter=',')
@@ -235,9 +234,18 @@ class Command(BaseCommand):
 
                             election_data = [election_id, election_category, election_date, election_party]
 
-                            if not election_id in Command.processed_elections:
-                                election_writer.writerow(election_data)
-                                Command.processed_elections.add(election_id)
+                            # We'll write the elections as we go
+                            # And keep track of them in memory
+                            with Command.elections_lock:
+                                if not election_id in Command.processed_elections:
+                                    with closing(connection.cursor()) as cursor:
+                                        fields = ','.join(ELECTION_COLUMNS)
+                                        query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s)'.format(fields)
+                                        cursor.execute(
+                                            query_string,
+                                            election_data,
+                                        )
+                                    Command.processed_elections.add(election_id)
 
                             participation_writer.writerow([this_voters_data[0], election_id])
 
@@ -250,12 +258,6 @@ class Command(BaseCommand):
             with closing(connection.cursor()) as cursor:
                 # We need to do this manually since copy_from doesn't handle CSV quoting
                 cursor.copy_expert("""COPY ohiovoter_voter FROM STDIN WITH CSV HEADER DELIMITER AS ','""", voter_stream)
-
-            # Write Elections
-            election_stream.seek(0)
-            with closing(connection.cursor()) as cursor:
-                # We need to do this manually since copy_from doesn't handle CSV quoting
-                cursor.copy_expert("""COPY ohiovoter_election FROM STDIN WITH CSV HEADER DELIMITER AS ','""", election_stream)
 
             # Write Participations
             participation_stream.seek(0)
@@ -280,22 +282,27 @@ class Command(BaseCommand):
             management.call_command('flush', interactive=False)
             management.call_command('migrate', interactive=False)
 
-            start = time.time()
+
 
             # download all the county data from the SoS website
             print('\nDownloading County data...')
-            pool = ThreadPool(8)
+
             with tempfile.TemporaryDirectory() as tmpdirname:
+
                 args = [(county, tmpdirname) for county in COUNTIES]
+
+                pool = ThreadPool(2)
                 pool.starmap(self.download_county_data, args)
                 pool.close()
                 pool.join()
 
-                # Parse and load it all into the database
-                for county in COUNTIES:
-                    self.load_county_data_into_db(county, tmpdirname)
+                start = time.time()
+                pool = ThreadPool(2)
+                pool.starmap(self.load_county_data_into_db, args)
+                pool.close()
+                pool.join()
+
+                end = time.time()
+                print(end - start)
 
             print('\nDone!')
-
-            end = time.time()
-            print(end - start)

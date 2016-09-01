@@ -285,7 +285,7 @@ class Command(BaseCommand):
             start = time.time()
 
             # download all the county data from the SoS website
-            print('\nDownloading County data...'
+            print('\nDownloading County data...')
             pool = ThreadPool(8)
             with tempfile.TemporaryDirectory() as tmpdirname:
                 args = [(county, tmpdirname) for county in COUNTIES]

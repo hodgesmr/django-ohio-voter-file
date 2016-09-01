@@ -289,7 +289,7 @@ class Command(BaseCommand):
                 args = [(county, tmpdirname) for county in COUNTIES]
 
                 print('Downloading county data...')
-                pool = ThreadPool(8)
+                pool = ThreadPool(8)  # I could probably expirment with this number
                 pool.starmap(self.download_county_data, args)
                 pool.close()
                 pool.join()
@@ -297,7 +297,7 @@ class Command(BaseCommand):
                 start = time.time()
 
                 print('Importing country data...')
-                pool = ThreadPool(2)
+                pool = ThreadPool(2)  # I need to expirment with this number
                 pool.starmap(self.load_county_data_into_db, args)
                 pool.close()
                 pool.join()

@@ -38,6 +38,7 @@ class Election(models.Model):
 
     PARTY_CHOICES_SET = set([_[0] for _ in PARTY_CHOICES])
 
+    id = models.CharField(primary_key=True, max_length=64, null=False)
     category = models.IntegerField(db_index=True, null=False, blank=False, choices=CATEGORY_CHOICES)
     date = models.DateField(db_index=True, null=False, blank=False)
     party = models.CharField(max_length=512, db_index=True, null=False, blank=False, choices=PARTY_CHOICES)

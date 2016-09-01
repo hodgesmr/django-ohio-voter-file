@@ -267,10 +267,6 @@ class Command(BaseCommand):
                     columns=PARTICIPATION_COLUMNS,
                 )
 
-    @staticmethod
-    def download_and_parse(county, directory_name):
-        Command.download_county_data(county, directory_name)
-        Command.load_county_data_into_db(county, directory_name)
         print('{} County...Finished!'.format(county.title()))
 
     def handle(self, **kwargs):
@@ -288,16 +284,25 @@ class Command(BaseCommand):
 
             print('\nDownloading and parsing county data. This will take a while...')
 
-            start = time.time()
             with tempfile.TemporaryDirectory() as tmpdirname:
 
                 args = [(county, tmpdirname) for county in COUNTIES]
 
+                print('Downloading county data...')
                 pool = ThreadPool(8)
-                pool.starmap(self.download_and_parse, args)
+                pool.starmap(self.download_county_data, args)
                 pool.close()
                 pool.join()
 
+                start = time.time()
+
+                print('Importing country data...')
+                pool = ThreadPool(2)
+                pool.starmap(self.load_county_data_into_db, args)
+                pool.close()
+                pool.join()
+
+                end = time.time()
+                print(end - start)
+
             print('\nDone!')
-            end = time.time()
-            print(end - start)

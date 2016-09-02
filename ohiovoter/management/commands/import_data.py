@@ -285,7 +285,7 @@ class Command(BaseCommand):
             with tempfile.TemporaryDirectory() as tmpdirname:
                 num_cpus = cpu_count()
 
-                print('Starting {} worker processes...').format(num_cpus)
+                print('Starting {} worker processes...'.format(num_cpus))
                 pool = Pool(num_cpus)
 
                 args = [(county, tmpdirname) for county in COUNTIES]

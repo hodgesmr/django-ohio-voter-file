@@ -297,7 +297,7 @@ class Command(BaseCommand):
                 start = time.time()
 
                 print('Importing country data...')
-                pool = ThreadPool(2)  # I need to expirment with this number
+                pool = ThreadPool(8)  # I need to expirment with this number
                 pool.starmap(self.load_county_data_into_db, args)
                 pool.close()
                 pool.join()

@@ -11,5 +11,5 @@ services:
       - DB_NAME=ohiovoter
       - DB_HOST=postgres
       - DB_USER=postgres
-      - DB_PASS=ohiovoter
+      - DB_PASS=postgres
       - DB_PORT=5432

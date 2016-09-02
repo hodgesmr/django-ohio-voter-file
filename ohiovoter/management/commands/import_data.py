@@ -4,10 +4,9 @@ from django.db import connection
 from datetime import datetime
 import hashlib
 from io import StringIO
-from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing import Pool, cpu_count
 import os
 import tempfile
-from threading import Lock
 import time
 import urllib.request
 import zipfile
@@ -177,9 +176,6 @@ PARTICIPATION_COLUMNS = [
 
 class Command(BaseCommand):
 
-    processed_elections = set()
-    elections_lock = Lock()
-
     @staticmethod
     def download_county_data(county, destination_directory):
         url = 'ftp://sosftp.sos.state.oh.us/free/Voter/{}.zip'.format(county)
@@ -191,6 +187,9 @@ class Command(BaseCommand):
 
     @staticmethod
     def load_county_data_into_db(county, directory_name):
+
+        processed_elections = set()
+
         county_filename = '{}/{}.TXT'.format(directory_name, county)
 
         with open(county_filename, encoding='utf-8') as input_file:
@@ -234,16 +233,15 @@ class Command(BaseCommand):
 
                             # We'll write the elections as we go
                             # And keep track of them in memory
-                            with Command.elections_lock:
-                                if not election_id in Command.processed_elections:
-                                    with closing(connection.cursor()) as cursor:
-                                        fields = ','.join(ELECTION_COLUMNS)
-                                        query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s)'.format(fields)
-                                        cursor.execute(
-                                            query_string,
-                                            election_data,
-                                        )
-                                    Command.processed_elections.add(election_id)
+                            if not election_id in processed_elections:
+                                with closing(connection.cursor()) as cursor:
+                                    fields = ','.join(ELECTION_COLUMNS)
+                                    query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s) ON CONFLICT ({}) DO NOTHING'.format(fields, fields)
+                                    cursor.execute(
+                                        query_string,
+                                        election_data,
+                                    )
+                                processed_elections.add(election_id)
 
                             participation_writer.writerow([this_voters_data[0], election_id])
 
@@ -285,22 +283,20 @@ class Command(BaseCommand):
             print('\nDownloading and parsing county data. This will take a while...')
 
             with tempfile.TemporaryDirectory() as tmpdirname:
+                num_cpus = cpu_count()
+
+                print('Starting {} worker processes...').format(num_cpus)
+                pool = Pool(num_cpus)
 
                 args = [(county, tmpdirname) for county in COUNTIES]
 
                 print('Downloading county data...')
-                pool = ThreadPool(8)  # I could probably expirment with this number
                 pool.starmap(self.download_county_data, args)
-                pool.close()
-                pool.join()
 
                 start = time.time()
 
                 print('Importing country data...')
-                pool = ThreadPool(8)  # I need to expirment with this number
                 pool.starmap(self.load_county_data_into_db, args)
-                pool.close()
-                pool.join()
 
                 end = time.time()
                 print(end - start)

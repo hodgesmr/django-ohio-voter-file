@@ -6,15 +6,12 @@ import hashlib
 from io import StringIO
 from multiprocessing import Pool, cpu_count
 import os
-import re
-import subprocess
 import tempfile
 import time
 import urllib.request
 import zipfile
 
 from django import db
-from django.conf import settings
 from django.core import management
 from django.core.management.base import BaseCommand
 
@@ -192,7 +189,6 @@ class Command(BaseCommand):
     @staticmethod
     def load_county_data_into_db(county, directory_name):
         db.connections.close_all()
-        os.environ['PGPASSWORD'] = settings.DB_PASS
 
         processed_elections = set()
 
@@ -207,8 +203,11 @@ class Command(BaseCommand):
             election_stream = StringIO()
             participation_stream = StringIO()
 
-            voter_writer = csv.writer(voter_stream, delimiter=',')
+            voter_writer = csv.writer(voter_stream, delimiter=',', quoting=csv.QUOTE_ALL)
+            voter_writer.writerow(VOTER_COLUMNS)  # start with the header
 
+            # Since I'm not defining this table, not pulling it from the CSV,
+            # I don't need to quote my values, and we'll add the header at write
             participation_writer = csv.writer(participation_stream, delimiter=',')
 
             for row in reader:
@@ -220,7 +219,6 @@ class Command(BaseCommand):
                     lower_field_name = field_name.lower()
 
                     if hasattr(Voter, lower_field_name):  # parse Voter data
-                        column_value = re.sub(r'[\[\](){},!;\\]', '', column_value) # try to clean up a bit
                         this_voters_data.append(column_value)
                     else:  # parse Election data
                         if column_value:
@@ -253,40 +251,21 @@ class Command(BaseCommand):
                 this_voters_data.append(county)
                 voter_writer.writerow(this_voters_data)
 
-            # I was originally using the connection.curor `copy_from` and `copy_expert`
-            # to do the data imports, but it kept locking up on the large data sets
-            # from the largest county files. Calling directly to psql (hopefully)
-            # handles it better.
-
             # Write Voters
             voter_stream.seek(0)
-            columns_txt = ' (%s)' % ', '.join(VOTER_COLUMNS)
-            call =[
-                'psql',
-                '-c', "COPY {}{} FROM STDIN DELIMITER ','".format('ohiovoter_voter', columns_txt),
-                '--set=ON_ERROR_STOP=true', # to be safe
-                '-d', settings.DB_NAME,
-                '-U', settings.DB_USER,
-                '-h', settings.DB_HOST,
-                '-p', settings.DB_PORT
-            ]
-            sp = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, universal_newlines=True)
-            sp.communicate(voter_stream.read())
+            with closing(connection.cursor()) as cursor:
+                # We need to do this manually since copy_from doesn't handle CSV quoting
+                cursor.copy_expert("""COPY ohiovoter_voter FROM STDIN WITH CSV HEADER DELIMITER AS ','""", voter_stream)
 
             # Write Participations
             participation_stream.seek(0)
-            columns_txt = ' (%s)' % ', '.join(PARTICIPATION_COLUMNS)
-            call =[
-                'psql',
-                '-c', "COPY {}{} FROM STDIN DELIMITER ','".format('ohiovoter_participation', columns_txt),
-                '--set=ON_ERROR_STOP=true', # to be safe
-                '-d', settings.DB_NAME,
-                '-U', settings.DB_USER,
-                '-h', settings.DB_HOST,
-                '-p', settings.DB_PORT
-            ]
-            sp = subprocess.Popen(call, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, universal_newlines=True)
-            sp.communicate(participation_stream.read())
+            with closing(connection.cursor()) as cursor:
+                cursor.copy_from(
+                    file=participation_stream,
+                    table='ohiovoter_participation',
+                    sep=',',
+                    columns=PARTICIPATION_COLUMNS,
+                )
 
         print('{} County...Finished!'.format(county.title()))
 

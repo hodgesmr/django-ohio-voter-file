@@ -34,6 +34,6 @@ setup(
     install_requires=REQUIREMENTS,
     include_package_data=True,
     classifiers=[
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
     ]
 )

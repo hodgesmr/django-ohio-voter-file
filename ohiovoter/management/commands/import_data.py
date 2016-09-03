@@ -221,7 +221,6 @@ class Command(BaseCommand):
             county_filenames.append(f)
 
         for county_filename in county_filenames:
-            print('Processing {}'.format(county_filename))
             with open(county_filename, encoding='utf-8') as input_file:
                 reader = csv.reader(input_file)
 

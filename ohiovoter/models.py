@@ -60,7 +60,6 @@ class Election(models.Model):
         return output
 
     class Meta:
-        #unique_together = ('category', 'date', 'party')
         ordering = ('-date', 'party')
 
 

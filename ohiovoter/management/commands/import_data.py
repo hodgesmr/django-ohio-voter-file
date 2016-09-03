@@ -315,7 +315,7 @@ class Command(BaseCommand):
                 num_cpus = cpu_count()
 
                 print('Starting {} worker processes...'.format(num_cpus))
-                pool = Pool(num_cpus)
+                pool = Pool(num_cpus-1)
 
                 args = [(county, tmpdirname) for county in COUNTIES]
 

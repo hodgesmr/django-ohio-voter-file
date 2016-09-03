@@ -263,6 +263,7 @@ class Command(BaseCommand):
                                 # We'll write the elections as we go
                                 # And keep track of them in memory
                                 if not election_id in processed_elections:
+                                    print('UPSERTing election data: {} - {}'.format(county_filename, lection_id))
                                     with closing(connection.cursor()) as cursor:
                                         fields = ','.join(ELECTION_COLUMNS)
                                         query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s) ON CONFLICT (id) DO NOTHING'.format(fields)
@@ -270,6 +271,7 @@ class Command(BaseCommand):
                                             query_string,
                                             election_data,
                                         )
+                                    print('Done UPSERTing election data: {} - {}'.format(county_filename, lection_id))
                                     processed_elections.add(election_id)
 
                                 participation_writer.writerow([this_voters_data[0], election_id])
@@ -279,13 +281,16 @@ class Command(BaseCommand):
                     voter_writer.writerow(this_voters_data)
 
                 # Write Voters
+                print('Writng voters: {}'.format(county_filename))
                 voter_stream.seek(0)
                 with closing(connection.cursor()) as cursor:
                     # We need to do this manually since copy_from doesn't handle CSV quoting
                     cursor.copy_expert("""COPY ohiovoter_voter FROM STDIN WITH CSV HEADER DELIMITER AS ','""", voter_stream)
+                print('Done Writng voters: {}'.format(county_filename))
 
                 # Write Participations
                 participation_stream.seek(0)
+                print('Writng participations: {}'.format(county_filename))
                 with closing(connection.cursor()) as cursor:
                     cursor.copy_from(
                         file=participation_stream,
@@ -293,6 +298,7 @@ class Command(BaseCommand):
                         sep=',',
                         columns=PARTICIPATION_COLUMNS,
                     )
+                print('Done writng participations: {}'.format(county_filename))
 
         print('{} County...Finished!'.format(county.title()))
 

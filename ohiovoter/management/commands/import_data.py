@@ -297,7 +297,7 @@ class Command(BaseCommand):
 
                 start = time.time()
 
-                print('Importing country data...')
+                print('Importing county data...')
                 pool.starmap(self.load_county_data_into_db, args)
 
                 end = time.time()

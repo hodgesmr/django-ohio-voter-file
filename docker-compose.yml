@@ -5,6 +5,8 @@ services:
     environment:
       - POSTGRES_DB=ohiovoter
       - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
 
   ohiovoter:
     build: .

@@ -1,4 +1,7 @@
 FROM python:3.5
+RUN apt-get update -y
+RUN apt-get upgrade -y
+RUN apt-get install postgresql postgresql-client -y
 ENV APP_DIR=/opt/ohiovoter \
     PYTHONUNBUFFERED=1
 RUN pip install -U pip ipython

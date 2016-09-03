@@ -11,6 +11,7 @@ import time
 import urllib.request
 import zipfile
 
+from django import db
 from django.core import management
 from django.core.management.base import BaseCommand
 
@@ -187,6 +188,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def load_county_data_into_db(county, directory_name):
+        db.connections.close_all()
 
         processed_elections = set()
 
@@ -236,7 +238,7 @@ class Command(BaseCommand):
                             if not election_id in processed_elections:
                                 with closing(connection.cursor()) as cursor:
                                     fields = ','.join(ELECTION_COLUMNS)
-                                    query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s) ON CONFLICT ({}) DO NOTHING'.format(fields, fields)
+                                    query_string = 'INSERT INTO ohiovoter_election ({}) VALUES (%s, %s, %s, %s) ON CONFLICT (id) DO NOTHING'.format(fields)
                                     cursor.execute(
                                         query_string,
                                         election_data,

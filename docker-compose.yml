@@ -1,12 +1,5 @@
 version: '2'
 services:
-  postgres:
-    image: postgres
-    environment:
-      - POSTGRES_DB=ohiovoter
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
 
   ohiovoter:
     build: .
@@ -20,8 +13,3 @@ services:
       - DB_USER=postgres
       - DB_PASS=postgres
       - DB_PORT=5432
-
-  ohiovoter_dev:
-    extends: ohiovoter
-    depends_on:
-      - postgres

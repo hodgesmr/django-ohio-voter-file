@@ -13,7 +13,7 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
   - [Import Data](#import-data)
   - [Data Model](#data-model)
   - [Query Examples](#query-examples)
-- [Anything else I should know](#anything-else-i-should-know)
+- [Anything else I should know?](#anything-else-i-should-know)
 - [License](#license)
 
 ## Installation

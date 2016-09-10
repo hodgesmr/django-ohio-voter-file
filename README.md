@@ -13,6 +13,7 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
   - [Import Data](#import-data)
   - [Data Model](#data-model)
   - [Query Examples](#query-examples)
+- [Anything else I should know](#anything-else-i-should-know)
 - [License](#license)
 
 ## Installation
@@ -219,6 +220,12 @@ for previous_primary in previous_non_republican_primaries:
 
 result = republican_primary_voter_ids.count()
 ```
+
+## Anything else I should know?
+
+You'll note that some queries may take a _long time_. This is due to a combination of [table size](#import-data) and non-optimized database indexes. You can likely see higher performance for your queries if you create indexes around the data that is interesting to you.
+
+You should also read the [License](#license) section below if you plan to do anything substantial with the data.
 
 ## License
 

@@ -4,7 +4,7 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 >it is advised that a database application be utilized to load and work with the data
 
-*django-ohio-voter-file* will download the CSV data, parse it into relationships, load it into a PostgreSQL, and utilize the Django ORM for easy querying.
+**django-ohio-voter-file** will download the CSV data, parse it into relationships, load it into a PostgreSQL, and utilize the Django ORM for easy querying.
 
 ## Contents
 

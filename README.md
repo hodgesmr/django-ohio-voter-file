@@ -17,17 +17,34 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 ## Installation
 
-**TODO**
-... Docker instructions ...
+You may certainly clone this repository and run the Django commands manually, but Docker makes it nice and easy to get all your dependencies. You can find the [various Docker install options](https://docs.docker.com/engine/installation/) for your platform and get rolling.
+
+This project relies on PostgreSQL and thus assumes you have a PostgreSQL database up and running.
 
 ## Usage
 
+**django-ohio-voter-file** is best used within an interactive shell. Create a Docker container and launch bash:
+
+```sh
+docker run --name ohiovoter \
+  -e DB_HOST=<your-host> \
+  -e DB_USER=<your-user> \
+  -e DB_PASS=<your-password> \
+  -e DB_PORT=<your-port> \
+  -i -t hodgesmr/ohiovoter /bin/bash
+```
+
+You must pass four environment variables to the container to reference your PostgreSQL server: `DB_HOST`, `DB_USER`, `DB_PASS`, and `DB_PORT`.
+
+**Note:** it is assumed that PostgreSQL has a database `ohiovoter` to which your user can read/write.
+
 ### Import Data
 
-The first step is to download the Ohio Voter data from the [Secretary of State FTP](http://www6.sos.state.oh.us/ords/f?p=111:1). This is done for you with the provided `import_data` Django management command.
+The first step is to download the Ohio Voter data from the [Secretary of State FTP](http://www6.sos.state.oh.us/ords/f?p=111:1). This is done for you with the provided `import_data` Django management command. From within a running container:
 
-**TODO**
-... Docker instructions ...
+```sh
+python manage.py import_data
+```
 
 **WARNING:** This is a destructive operation. Since the voter file is a snapshot of _current_ registrants, there is no effort to keep a historic lineage or update old records with new data. Every time you import, the old database will be flushed (removing all data) and replaced with the most recent data.
 
@@ -150,8 +167,11 @@ The **Participation** model simply acts as a many-to-many table between **Electi
 
 After you have imported the data, you can start running queries. Of course, you can use SQL if you'd like, but you can also leverage the Django ORM.
 
-**TODO**
-... shell ...
+From within your running container, open a Django shell:
+
+```sh
+python manage.py shell
+```
 
 Here are some example queries:
 

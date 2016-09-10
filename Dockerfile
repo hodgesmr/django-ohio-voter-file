@@ -1,6 +1,8 @@
 FROM python:3.5
 ENV APP_DIR=/opt/ohiovoter \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    DB_NAME=ohiovoter \
+    DJANGO_SETTINGS_MODULE=ohiovoter.settings
 RUN pip install -U pip ipython
 RUN mkdir -p $APP_DIR
 WORKDIR $APP_DIR

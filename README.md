@@ -1,6 +1,6 @@
 # django-ohio-voter-file
 
-The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.state.oh.us/ords/f?p=111:1) of Ohio voter registrations and voting history. In total, the CSVs hold roughly 4 GB of voter data. You can only get so far with Excel or `grep`, and as the portal states:
+The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.state.oh.us/ords/f?p=111:1) of Ohio voter registrations and voting history that dated back to 2000. In total, the CSVs hold roughly 4 GB of voter data. You can only get so far with Excel or `grep`, and as the portal states:
 
 >it is advised that a database application be utilized to load and work with the data
 

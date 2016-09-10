@@ -8,12 +8,12 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 ## Contents
 
-- Installation
-- Usage
-  - Import Data
-  - Data Model
-  - Query Examples
-- License
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Import Data](#import-data)
+  - [Data Model](#data-model)
+  - [Query Examples](#query-example)
+- [License](#license)
 
 ## Installation
 
@@ -31,7 +31,13 @@ The first step is to download the Ohio Voter data from the [Secretary of State F
 
 **WARNING:** This is a destructive operation. Since the voter file is a snapshot of _current_ registrants, there is no effort to keep a historic lineage or update old records with new data. Every time you import, the old database will be flushed (removing all data) and replaced with the most recent data.
 
-**Note:** This operation can take a _long time_ and will vary depending on your hardware and network connections. As a benchmark, I ran the import on an [AWS i2.2xlarge EC2](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/i2-instances.html) instance, with PostgreSQL running on the same box. With this provisioning I was able to load all of the data in just under 75 minutes. This resulted in 41 GB of data loaded into PostgreSQL.
+**Note:** This operation can take a _long time_ and will vary depending on your hardware and network connections. As a benchmark, I ran the import on an [AWS i2.2xlarge EC2](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/i2-instances.html) instance, with PostgreSQL running on the same box. With this provisioning I was able to load all of the data in just under 75 minutes. This resulted in 41 GB of data loaded into PostgreSQL. On my last run of the import, the table sizes were:
+
+| table                   | row count  |
+|-------------------------|------------|
+| ohiovoter_election      | 149        |
+| ohiovoter_voter         | 7,724,006  |
+| ohiovoter_participation | 71,256,665 |
 
 ### Data Model
 
@@ -153,16 +159,20 @@ Here are some example queries:
 from ohiovoter.models import Voter, Election, Participation
 from datetime import datatime
 
+
 # How many registered voters are there?
 Voter.objects.all().count()
 7724006
+
 
 # What is the registration status of Matt Hodges?
 Voter.objects.get(last_name="HODGES", first_name="MATTHEW", middle_name="ROBERT").voter_status
 'ACTIVE'
 
+
 # Give me all the voters in Jefferson county
 jefferson_county_voters = Voter.objects.filter(county="JEFFERSON")
+
 
 # Give me all the voters who participated in the 2012 general election
 the_date = datetime.strptime('2012-11-06', '%Y-%m-%d')

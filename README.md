@@ -178,7 +178,7 @@ Here are some example queries:
 
 ```python
 from ohiovoter.models import Voter, Election, Participation
-from datetime import datatime
+from datetime import datetime
 
 
 # How many registered voters are there?
@@ -198,7 +198,9 @@ jefferson_county_voters = Voter.objects.filter(county="JEFFERSON")
 # Give me all the voters who participated in the 2012 general election
 the_date = datetime.strptime('2012-11-06', '%Y-%m-%d')
 the_election = Election.objects.get(date=the_date)
-voters = Voter.objects.filter(sos_voterid__in=[_['voter'] for _ in Participation.objects.filter(election=the_election).values('voter')])
+from django.db.models import F
+ids = Participation.objects.filter(election=the_election).values('voter').annotate(sos_voterid=F('voter')).values('sos_voterid')
+voters = Voter.objects.filter(sos_voterid__in=ids)
 
 
 # How many of 2016 Republican Primary Voters participated in a primary that
@@ -206,7 +208,8 @@ voters = Voter.objects.filter(sos_voterid__in=[_['voter'] for _ in Participation
 # In other words, which Republican primary voters in 2016 switch from another party?
 republican_primary_date = datetime.strptime('2016-03-15', '%Y-%m-%d')
 republican_primary = Election.objects.get(date=republican_primary_date, party=Election.PARTY_REPUBLICAN)
-republican_primary_voter_ids = Participation.objects.filter(election=republican_primary).values('voter')
+from django.db.models import F
+republican_primary_voter_ids = Participation.objects.filter(election=republican_primary).values('voter').annotate(sos_voterid=F('voter')).values('sos_voterid')
 previous_non_republican_primaries = Election.objects.filter(
   date__lt=republican_primary_date
 ).exclude(

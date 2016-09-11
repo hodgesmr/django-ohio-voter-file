@@ -8,7 +8,6 @@ from io import StringIO
 from multiprocessing import Pool, cpu_count
 import os
 import tempfile
-import time
 import urllib.request
 import zipfile
 
@@ -321,12 +320,7 @@ class Command(BaseCommand):
                 print('Downloading county data...')
                 pool.starmap(self.download_county_data, args)
 
-                start = time.time()
-
                 print('Importing county data...')
                 pool.starmap(self.load_county_data_into_db, args)
-
-                end = time.time()
-                print(end - start)
 
             print('\nDone!')

@@ -18,6 +18,8 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 ## Installation
 
+**django-ohio-voter-file** is built with _Django 1.10_ and _Python 3.5_.
+
 You may certainly clone this repository and run the Django commands manually, but Docker makes it nice and easy to get all your dependencies. You can find the [various Docker install options](https://docs.docker.com/engine/installation/) for your platform and get rolling.
 
 This project relies on PostgreSQL and thus assumes you have a PostgreSQL database up and running. You should have a database `ohiovoter` to which you can read/write.

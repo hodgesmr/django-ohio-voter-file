@@ -42,10 +42,7 @@ class Election(models.Model):
     category = models.IntegerField(db_index=True, null=False, blank=False, choices=CATEGORY_CHOICES)
     date = models.DateField(db_index=True, null=False, blank=False)
     party = models.CharField(max_length=512, db_index=True, null=False, blank=False, choices=PARTY_CHOICES)
-
-    @property
-    def voters(self):
-        return [obj.voter for obj in self.participations.all()]
+    voters = models.ManyToManyField('Voter', through='Participation')
 
     def __str__(self):
         if self.party != self.PARTY_NONE:
@@ -111,10 +108,7 @@ class Voter(models.Model):
     village = models.CharField(max_length=512, null=True)
     ward = models.CharField(max_length=512, null=True)
     county = models.CharField(max_length=512, null=True)
-
-    @property
-    def elections(self):
-        return [obj.election for obj in self.participations.all()]
+    elections = models.ManyToManyField(Election, through='Participation')
 
     def __str__(self):
         return '{} - {} {} {}'.format(self.sos_voterid,
@@ -128,8 +122,8 @@ class Voter(models.Model):
 
 
 class Participation(models.Model):
-    election = models.ForeignKey(Election, related_name='participations', on_delete=models.CASCADE)
-    voter = models.ForeignKey(Voter, related_name='participations', on_delete=models.CASCADE)
+    election = models.ForeignKey(Election, on_delete=models.CASCADE)
+    voter = models.ForeignKey(Voter, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('election', 'voter')

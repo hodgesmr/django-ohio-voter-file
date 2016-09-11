@@ -20,7 +20,7 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 You may certainly clone this repository and run the Django commands manually, but Docker makes it nice and easy to get all your dependencies. You can find the [various Docker install options](https://docs.docker.com/engine/installation/) for your platform and get rolling.
 
-This project relies on PostgreSQL and thus assumes you have a PostgreSQL database up and running.
+This project relies on PostgreSQL and thus assumes you have a PostgreSQL database up and running. You should have a database `ohiovoter` to which you can read/write.
 
 ## Usage
 
@@ -65,14 +65,16 @@ Three models are represented upon import: **Election**, **Voter**, and **Partici
 
 The **Election** model represents a specific real-world election.
 
-| name     | type         |
-|----------|--------------|
-| id       | CharField    |
-| category | IntegerField |
-| date     | DateField    |
-| party    | CharField    |
+| name     | type            |
+|----------|-----------------|
+| id       | CharField       |
+| category | IntegerField    |
+| date     | DateField       |
+| party    | CharField       |
+| voters   | ManyToManyField |
 
-`id` is a generated unique id that acts as a primary key.
+The `id` field is a generated unique id that acts as a primary key.
+The `voters` field uses the **Participation** table as a passthrough.
 
 `category` is an enum defined as:
 
@@ -100,59 +102,61 @@ Typically, only primary elections (`CATEGORY_PRIMARY`) will have a `party` field
 
 #### Voter
 
-The **Voter** model almost exactly mirrors the Secretary of State Voter representation as defined in the [Voter File Layout](ftp://server6.sos.state.oh.us/free/voter_file_layout.doc). I've added a `County` field that was inferred from the source CSV.
+The **Voter** model almost exactly mirrors the Secretary of State Voter representation as defined in the [Voter File Layout](ftp://server6.sos.state.oh.us/free/voter_file_layout.doc). I've added a `county` field that was inferred from the source CSV.
+
+| name                          | type            |
+|-------------------------------|-----------------|
+| sos_voterid                   | CharField       |
+| county_number                 | IntegerField    |
+| county_id                     | CharField       |
+| last_name                     | CharField       |
+| first_name                    | CharField       |
+| middle_name                   | CharField       |
+| suffix                        | CharField       |
+| date_of_birth                 | DateField       |
+| registration_date             | DateField       |
+| voter_status                  | CharField       |
+| party_affiliation             | CharField       |
+| residential_address1          | CharField       |
+| residential_secondary_addr    | CharField       |
+| residential_city              | CharField       |
+| residential_state             | CharField       |
+| residential_zip               | CharField       |
+| residential_zip_plus4         | CharField       |
+| residential_country           | CharField       |
+| residential_postalcode        | CharField       |
+| mailing_address1              | CharField       |
+| mailing_secondary_address     | CharField       |
+| mailing_city                  | CharField       |
+| mailing_state                 | CharField       |
+| mailing_zip                   | CharField       |
+| mailing_zip_plus4             | CharField       |
+| mailing_country               | CharField       |
+| mailing_postal_code           | CharField       |
+| career_center                 | CharField       |
+| city                          | CharField       |
+| city_school_district          | CharField       |
+| county_court_district         | CharField       |
+| congressional_district        | IntegerField    |
+| court_of_appeals              | CharField       |
+| edu_service_center_district   | CharField       |
+| exempted_vill_school_district | CharField       |
+| library                       | CharField       |
+| local_school_district         | CharField       |
+| municipal_court_district      | CharField       |
+| precinct_name                 | CharField       |
+| precinct_code                 | CharField       |
+| state_board_of_education      | CharField       |
+| state_representative_district | IntegerField    |
+| state_senate_district         | IntegerField    |
+| township                      | CharField       |
+| village                       | CharField       |
+| ward                          | CharField       |
+| county                        | CharField       |
+| elections                     | ManyToManyField |
 
 The `sos_voterid` field serves as the primary key.
-
-| name                          | type         |
-|-------------------------------|--------------|
-| sos_voterid                   | CharField    |
-| county_number                 | IntegerField |
-| county_id                     | CharField    |
-| last_name                     | CharField    |
-| first_name                    | CharField    |
-| middle_name                   | CharField    |
-| suffix                        | CharField    |
-| date_of_birth                 | DateField    |
-| registration_date             | DateField    |
-| voter_status                  | CharField    |
-| party_affiliation             | CharField    |
-| residential_address1          | CharField    |
-| residential_secondary_addr    | CharField    |
-| residential_city              | CharField    |
-| residential_state             | CharField    |
-| residential_zip               | CharField    |
-| residential_zip_plus4         | CharField    |
-| residential_country           | CharField    |
-| residential_postalcode        | CharField    |
-| mailing_address1              | CharField    |
-| mailing_secondary_address     | CharField    |
-| mailing_city                  | CharField    |
-| mailing_state                 | CharField    |
-| mailing_zip                   | CharField    |
-| mailing_zip_plus4             | CharField    |
-| mailing_country               | CharField    |
-| mailing_postal_code           | CharField    |
-| career_center                 | CharField    |
-| city                          | CharField    |
-| city_school_district          | CharField    |
-| county_court_district         | CharField    |
-| congressional_district        | IntegerField |
-| court_of_appeals              | CharField    |
-| edu_service_center_district   | CharField    |
-| exempted_vill_school_district | CharField    |
-| library                       | CharField    |
-| local_school_district         | CharField    |
-| municipal_court_district      | CharField    |
-| precinct_name                 | CharField    |
-| precinct_code                 | CharField    |
-| state_board_of_education      | CharField    |
-| state_representative_district | IntegerField |
-| state_senate_district         | IntegerField |
-| township                      | CharField    |
-| village                       | CharField    |
-| ward                          | CharField    |
-| county                        | CharField    |
+The `elections` field uses the **Participation** table as a passthrough.
 
 #### Participation
 
@@ -177,7 +181,7 @@ python manage.py shell
 Here are some example queries:
 
 ```python
-from ohiovoter.models import Voter, Election, Participation
+from ohiovoter.models import Voter, Election
 from datetime import datetime
 
 
@@ -198,30 +202,30 @@ jefferson_county_voters = Voter.objects.filter(county="JEFFERSON")
 # Give me all the voters who participated in the 2012 general election
 the_date = datetime.strptime('2012-11-06', '%Y-%m-%d')
 the_election = Election.objects.get(date=the_date)
-from django.db.models import F
-ids = Participation.objects.filter(election=the_election).values('voter').annotate(sos_voterid=F('voter')).values('sos_voterid')
-voters = Voter.objects.filter(sos_voterid__in=ids)
+voters = the_election.voters.all()
 
 
-# How many of 2016 Republican Primary Voters participated in a primary that
-# wasn't for the Republican Party the last time they voted in a primary?
-# In other words, which Republican primary voters in 2016 switch from another party?
+# How many of 2016 Republican Primary Voters participated in the Democratic
+# primary the last time they voted in a primary?
 republican_primary_date = datetime.strptime('2016-03-15', '%Y-%m-%d')
-republican_primary = Election.objects.get(date=republican_primary_date, party=Election.PARTY_REPUBLICAN)
-from django.db.models import F
-republican_primary_voter_ids = Participation.objects.filter(election=republican_primary).values('voter').annotate(sos_voterid=F('voter')).values('sos_voterid')
-previous_non_republican_primaries = Election.objects.filter(
-  date__lt=republican_primary_date
-).exclude(
-  party=Election.PARTY_DEMOCRAT
-).exclude(
-  party=Election.PARTY_NONE
+republican_primary = Election.objects.get(
+  date=republican_primary_date,
+  party=Election.PARTY_REPUBLICAN
 )
-for previous_primary in previous_non_republican_primaries:
-    previous_primary_voter_ids = Participation.objects.filter(election=previous_primary).values('voter')
-    republican_primary_voter_ids = republican_primary_voter_ids.exclude(voter__in=previous_primary_voter_ids)
-
-result = republican_primary_voter_ids.count()
+republican_voters = republican_primary.voters.only('sos_voterid')
+count = 0
+for republican_voter in republican_voters:
+    past_primaries = republican_voter.elections.filter(
+      date__lt=republican_primary_date,
+      category=Election.CATEGORY_PRIMARY
+    ).only('party')
+    for past_primary in past_primaries:
+        if past_primary.party != Election.PARTY_NONE:
+            if past_primary.party == Election.PARTY_DEMOCRAT:
+                count += 1
+            break
+print(count)
+312054
 ```
 
 ## Anything else I should know?

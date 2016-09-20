@@ -1,6 +1,6 @@
 # django-ohio-voter-file
 
-The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.state.oh.us/ords/f?p=111:1) of Ohio voter registrations and voting history that dated back to 2000. In total, the CSVs hold roughly 4 GB of voter data. You can only get so far with Excel or `grep`, and as the portal states:
+The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.state.oh.us/ords/f?p=111:1) of Ohio voter registrations and voting history that dates back to 2000. In total, the CSVs hold roughly 4 GB of voter data. You can only get so far with Excel or `grep`, and as the portal states:
 
 >it is advised that a database application be utilized to load and work with the data
 
@@ -18,7 +18,7 @@ The Ohio Secretary Of State provides a [comprehensive data set](http://www6.sos.
 
 ## Installation
 
-**django-ohio-voter-file** is built with _Django 1.10_ and _Python 3.5_.
+**django-ohio-voter-file** is built with _Django 1.10_, _PostgreSQL 9.5_, and _Python 3.5_.
 
 You may certainly clone this repository and run the Django commands manually, but Docker makes it nice and easy to get all your dependencies. You can find the [various Docker install options](https://docs.docker.com/engine/installation/) for your platform and get rolling.
 
@@ -104,7 +104,7 @@ Typically, only primary elections (`CATEGORY_PRIMARY`) will have a `party` field
 
 #### Voter
 
-The **Voter** model almost exactly mirrors the Secretary of State Voter representation as defined in the [Voter File Layout](ftp://server6.sos.state.oh.us/free/voter_file_layout.doc). I've added a `county` field that was inferred from the source CSV.
+The **Voter** model almost exactly mirrors the Secretary of State Voter representation as defined in the [Voter File Layout](http://bit.ly/2d5mco0). I've added a `county` field that was inferred from the source CSV.
 
 | name                          | type            |
 |-------------------------------|-----------------|

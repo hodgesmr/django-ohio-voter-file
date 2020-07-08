@@ -17,7 +17,7 @@ def get_readme():
 
 
 REQUIREMENTS = [
-    'Django==1.10.7',
+    'Django==1.10.8',
     'psycopg2==2.6.*',
 ]
 
